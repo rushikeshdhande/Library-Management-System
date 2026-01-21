@@ -1,20 +1,29 @@
-import nodeMailer from "nodemailer";
+import nodemailer from "nodemailer";
 
 export const sendEmail = async ({ email, subject, message }) => {
-  const transporter = nodeMailer.createTransport({
-    service: "gmail", // direct gmail use kar
-    auth: {
-      user: process.env.SMTP_MAIL,
-      pass: process.env.SMTP_PASSWORD,
-    },
-  });
+  try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.SMTP_MAIL,
+        pass: process.env.SMTP_PASSWORD,
+      },
+    });
 
-  const mailOptions = {
-    from: `"Rushikesh Dhande" <${process.env.SMTP_MAIL}>`,
-    to: email,
-    subject,
-    html: message,
-  };
+    await transporter.verify();
 
-  await transporter.sendMail(mailOptions);
+    await transporter.sendMail({
+      from: `"Rushikesh Dhande" <${process.env.SMTP_MAIL}>`,
+      to: email,
+      subject,
+      html: message,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Email send failed:", error.message);
+    throw error;
+  }
 };
