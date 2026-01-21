@@ -11,9 +11,9 @@ export async function sendVerificationCode(verificationCode, email) {
       message,
     });
 
-    return true; // success signal
+    return true;
   } catch (error) {
-    console.error("OTP email failed:", error.message);
-    throw new Error("Failed to send OTP email");
+    console.error("OTP send failed:", error.message);
+    throw new Error("Verification code failed to send");
   }
 }
