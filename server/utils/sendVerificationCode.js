@@ -1,22 +1,19 @@
 import { generateVerificationOtpEmailTemplate } from "./emailTemplates.js";
 import { sendEmail } from "./sendEmail.js";
 
-export async function sendVerificationCode(verificationCode, email, res) {
+export async function sendVerificationCode(verificationCode, email) {
   try {
     const message = generateVerificationOtpEmailTemplate(verificationCode);
-    sendEmail({
+
+    await sendEmail({
       email,
       subject: "Verification Code (Rushikesh Library Management System)",
       message,
     });
-    res.status(200).json({
-      success: true,
-      message: "Verification code sent successfully.",
-    });
+
+    return true; // success signal
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Verification code failed to send.",
-    });
+    console.error("OTP email failed:", error.message);
+    throw new Error("Failed to send OTP email");
   }
 }
