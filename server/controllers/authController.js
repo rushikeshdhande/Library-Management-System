@@ -56,16 +56,13 @@ export const register = catchAsyncErrors(async (req, res, next) => {
   const verificationCode = await user.generateVerificationCode();
   await user.save();
 
-  try {
-    await sendVerificationCode(verificationCode, email);
+  // 🔥 FIXED OTP SEND
+  await sendVerificationCode(verificationCode, email);
 
-    res.status(200).json({
-      success: true,
-      message: "OTP sent to your email",
-    });
-  } catch (error) {
-    return next(new ErrorHandler("Failed to send OTP email.", 500));
-  }
+  res.status(200).json({
+    success: true,
+    message: "Verification code sent successfully.",
+  });
 });
 
 /* ================= VERIFY OTP ================= */
@@ -91,7 +88,11 @@ export const verifyOTP = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Invalid OTP.", 400));
   }
 
-  if (Date.now() > new Date(user.verificationCodeExpire).getTime()) {
+  const verificationCodeExpire = new Date(
+    user.verificationCodeExpire
+  ).getTime();
+
+  if (Date.now() > verificationCodeExpire) {
     return next(new ErrorHandler("OTP expired.", 400));
   }
 
@@ -127,7 +128,7 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Invalid email or password.", 400));
   }
 
-  sendToken(user, 200, "Login successful.", res);
+  sendToken(user, 200, "User login successfully.", res);
 });
 
 /* ================= LOGOUT ================= */
@@ -175,24 +176,16 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
   const resetPasswordUrl = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
   const message = generateForgotPasswordEmailTemplate(resetPasswordUrl);
 
-  try {
-    await sendEmail({
-      email: user.email,
-      subject: "Password Recovery",
-      message,
-    });
+  await sendEmail({
+    email: user.email,
+    subject: "Bookworm Library Management System Password Recovery",
+    message,
+  });
 
-    res.status(200).json({
-      success: true,
-      message: `Email sent to ${user.email}`,
-    });
-  } catch (error) {
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save({ validateBeforeSave: false });
-
-    return next(new ErrorHandler("Email could not be sent.", 500));
-  }
+  res.status(200).json({
+    success: true,
+    message: `Email sent to ${user.email} successfully.`,
+  });
 });
 
 /* ================= RESET PASSWORD ================= */
@@ -209,12 +202,17 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
 
   if (!user) {
     return next(
-      new ErrorHandler("Reset token invalid or expired.", 400)
+      new ErrorHandler(
+        "Reset password token is invalid or has been expired.",
+        400
+      )
     );
   }
 
   if (req.body.password !== req.body.confirmPassword) {
-    return next(new ErrorHandler("Passwords do not match.", 400));
+    return next(
+      new ErrorHandler("Password & confirm password do not match.", 400)
+    );
   }
 
   const hashedPassword = await bcrypt.hash(req.body.password, 10);
@@ -224,7 +222,7 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
 
   await user.save();
 
-  sendToken(user, 200, "Password reset successful.", res);
+  sendToken(user, 200, "Password reset successfully.", res);
 });
 
 /* ================= UPDATE PASSWORD ================= */
@@ -234,17 +232,25 @@ export const updatePassword = catchAsyncErrors(async (req, res, next) => {
   const { currentPassword, newPassword, confirmNewPassword } = req.body;
 
   if (!currentPassword || !newPassword || !confirmNewPassword) {
-    return next(new ErrorHandler("All fields required.", 400));
+    return next(new ErrorHandler("Please enter all fields.", 400));
   }
 
-  const isMatched = await bcrypt.compare(currentPassword, user.password);
+  const isPasswordMatched = await bcrypt.compare(
+    currentPassword,
+    user.password
+  );
 
-  if (!isMatched) {
-    return next(new ErrorHandler("Current password incorrect.", 400));
+  if (!isPasswordMatched) {
+    return next(new ErrorHandler("Current password is incorrect.", 400));
   }
 
   if (newPassword !== confirmNewPassword) {
-    return next(new ErrorHandler("Passwords do not match.", 400));
+    return next(
+      new ErrorHandler(
+        "New password and confirm new password do not match.",
+        400
+      )
+    );
   }
 
   user.password = await bcrypt.hash(newPassword, 10);
@@ -252,6 +258,6 @@ export const updatePassword = catchAsyncErrors(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: "Password updated successfully.",
+    message: "Password updated.",
   });
 });
